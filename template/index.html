@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CipherForge — Text Encryption Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#060a0f; --surface:#0d1520; --surface2:#111d2e; --border:#1a3a5c;
+    --accent:#00e5ff; --accent2:#00ff88; --accent3:#ff6b35;
+    --text:#c8e6f5; --text-dim:#4a7a9b; --danger:#ff4444;
+    --glow:0 0 20px rgba(0,229,255,0.3);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);pointer-events:none;z-index:1;}
+
+  /* AUTH */
+  #authOverlay{position:fixed;inset:0;background:rgba(6,10,15,0.97);z-index:1000;display:flex;align-items:center;justify-content:center;}
+  .auth-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px 48px;width:100%;max-width:420px;position:relative;animation:fadeUp 0.5s ease both;}
+  .auth-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);}
+  .auth-title{font-family:'Orbitron',monospace;font-size:1.4rem;font-weight:900;color:var(--accent);letter-spacing:3px;text-align:center;margin-bottom:6px;}
+  .auth-sub{text-align:center;color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:0.72rem;letter-spacing:2px;margin-bottom:28px;}
+  .auth-tabs{display:flex;margin-bottom:24px;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  .auth-tab{flex:1;padding:10px;background:var(--surface2);border:none;color:var(--text-dim);font-family:'Orbitron',monospace;font-size:0.65rem;letter-spacing:2px;cursor:pointer;transition:all 0.2s;}
+  .auth-tab.active{color:var(--accent);background:rgba(0,229,255,0.08);border-bottom:2px solid var(--accent);}
+  .auth-field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+  .auth-field label{font-family:'Share Tech Mono',monospace;font-size:0.68rem;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;}
+  .auth-field input{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.85rem;padding:11px 14px;outline:none;transition:border-color 0.3s;}
+  .auth-field input:focus{border-color:var(--accent);}
+  .auth-msg{font-family:'Share Tech Mono',monospace;font-size:0.75rem;padding:10px 14px;border-radius:6px;margin-bottom:14px;display:none;}
+  .auth-msg.error{background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.4);color:var(--danger);display:block;}
+  .auth-msg.success{background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);color:var(--accent2);display:block;}
+  .btn-auth{width:100%;padding:13px;background:linear-gradient(135deg,rgba(0,229,255,0.2),rgba(0,255,136,0.15));border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-family:'Orbitron',monospace;font-size:0.72rem;letter-spacing:2px;cursor:pointer;transition:all 0.25s;margin-top:4px;}
+  .btn-auth:hover{box-shadow:var(--glow);}
+
+  /* MAIN */
+  .container{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:40px 24px;}
+  header{text-align:center;margin-bottom:40px;animation:fadeDown 0.8s ease both;}
+  .logo-line{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:6px;}
+  .logo-icon{width:44px;height:44px;border:2px solid var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:var(--glow);animation:pulse 2s ease-in-out infinite;}
+  h1{font-family:'Orbitron',monospace;font-size:clamp(1.8rem,5vw,3rem);font-weight:900;letter-spacing:4px;background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(0,229,255,0.5));}
+  .subtitle{font-family:'Share Tech Mono',monospace;color:var(--text-dim);font-size:0.8rem;letter-spacing:3px;text-transform:uppercase;margin-top:6px;}
+  .subtitle span{color:var(--accent);}
+  .user-bar{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:var(--text-dim);}
+  .uname{color:var(--accent2);}
+  .btn-logout{background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:0.65rem;letter-spacing:1px;padding:4px 10px;cursor:pointer;transition:all 0.2s;}
+  .btn-logout:hover{border-color:var(--danger);color:var(--danger);}
+
+  /* TABS */
+  .tabs{display:flex;margin-bottom:28px;border:1px solid var(--border);border-radius:8px;overflow:hidden;animation:fadeUp 0.8s 0.2s ease both;}
+  .tab{flex:1;padding:13px;background:var(--surface);border:none;color:var(--text-dim);font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:2px;cursor:pointer;transition:all 0.3s;}
+  .tab.active{background:var(--surface2);color:var(--accent);border-bottom:2px solid var(--accent);}
+  .tab-dot{display:inline-block;width:5px;height:5px;background:var(--accent2);border-radius:50%;margin-right:6px;vertical-align:middle;}
+
+  /* CARD */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;position:relative;overflow:hidden;animation:fadeUp 0.8s 0.3s ease both;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media(max-width:700px){.grid-2{grid-template-columns:1fr;}}
+
+  /* FORM */
+  .field{display:flex;flex-direction:column;gap:7px;}
+  label{font-family:'Share Tech Mono',monospace;font-size:0.68rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);display:flex;align-items:center;gap:8px;}
+  .badge{background:rgba(0,229,255,0.1);color:var(--accent);border:1px solid rgba(0,229,255,0.3);border-radius:4px;padding:1px 6px;font-size:0.6rem;}
+  textarea,select,input[type="text"],input[type="password"],input[type="number"]{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.82rem;padding:11px 14px;transition:border-color 0.3s,box-shadow 0.3s;outline:none;width:100%;}
+  textarea{resize:vertical;min-height:130px;line-height:1.6;}
+  textarea:focus,select:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,229,255,0.1);}
+  select option{background:var(--surface2);color:var(--text);}
+  select{cursor:pointer;}
+  .key-field{display:none;flex-direction:column;gap:7px;}
+  .key-field.visible{display:flex;}
+  .divider{border:none;border-top:1px solid var(--border);margin:22px 0;position:relative;}
+  .divider::after{content:'◆';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:var(--border);background:var(--surface);padding:0 12px;font-size:0.65rem;}
+
+  /* BUTTONS */
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .btn{padding:13px 26px;border:none;border-radius:6px;font-family:'Orbitron',monospace;font-size:0.68rem;letter-spacing:2px;cursor:pointer;transition:all 0.25s;display:flex;align-items:center;gap:8px;}
+  .btn-primary{background:linear-gradient(135deg,rgba(0,229,255,0.2),rgba(0,255,136,0.15));border:1px solid var(--accent);color:var(--accent);box-shadow:var(--glow);flex:1;justify-content:center;}
+  .btn-primary:hover{background:linear-gradient(135deg,rgba(0,229,255,0.3),rgba(0,255,136,0.2));transform:translateY(-1px);}
+  .btn-secondary{background:rgba(255,107,53,0.1);border:1px solid var(--accent3);color:var(--accent3);flex:1;justify-content:center;}
+  .btn-secondary:hover{background:rgba(255,107,53,0.2);}
+  .btn-green{background:rgba(0,255,136,0.1);border:1px solid var(--accent2);color:var(--accent2);justify-content:center;}
+  .btn-green:hover{background:rgba(0,255,136,0.2);}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-dim);}
+  .btn-ghost:hover{border-color:var(--text-dim);color:var(--text);}
+
+  /* OUTPUT */
+  .output-wrapper{position:relative;}
+  .output-actions{position:absolute;top:8px;right:8px;display:flex;gap:5px;}
+  .icon-btn{width:30px;height:30px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all 0.2s;}
+  .icon-btn:hover{border-color:var(--accent);color:var(--accent);}
+  #outputArea{padding-right:80px;min-height:130px;font-size:0.78rem;color:var(--accent2);word-break:break-all;}
+
+  /* MESSAGES */
+  .message{padding:11px 14px;border-radius:6px;font-family:'Share Tech Mono',monospace;font-size:0.75rem;display:none;margin-bottom:12px;}
+  .message.error{background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.4);color:var(--danger);display:flex;gap:8px;}
+  .message.success{background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);color:var(--accent2);display:flex;gap:8px;}
+
+  /* INFO PANEL */
+  .info-panel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:18px;margin-top:20px;}
+  .info-panel h3{font-family:'Orbitron',monospace;font-size:0.65rem;letter-spacing:2px;color:var(--accent);margin-bottom:10px;}
+  .info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+  .info-item{display:flex;flex-direction:column;gap:3px;}
+  .info-label{font-family:'Share Tech Mono',monospace;font-size:0.62rem;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;}
+  .info-value{font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--text);}
+  .info-value.accent{color:var(--accent);}.info-value.green{color:var(--accent2);}.info-value.orange{color:var(--accent3);}
+
+  /* STRENGTH */
+  .strength-bar{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-top:4px;}
+  .strength-fill{height:100%;border-radius:2px;transition:all 0.5s ease;}
+
+  /* SECTION */
+  .section-title{font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* STATS */
+  .stats-bar{display:flex;gap:20px;margin-top:24px;padding:14px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;animation:fadeUp 0.8s 0.5s ease both;}
+  .stat{display:flex;flex-direction:column;gap:2px;}
+  .stat-value{font-family:'Orbitron',monospace;font-size:1rem;color:var(--accent);font-weight:700;}
+  .stat-label{font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;}
+
+  /* SAVED / HISTORY ITEMS */
+  .saved-item,.history-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;margin-bottom:10px;transition:border-color 0.2s;}
+  .saved-item:hover,.history-item:hover{border-color:var(--text-dim);}
+  .item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:'Share Tech Mono',monospace;font-size:0.7rem;}
+  .item-algo{color:var(--accent);}
+  .item-time{color:var(--text-dim);}
+  .item-preview{font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--text-dim);word-break:break-all;}
+  .item-preview span{color:var(--accent2);}
+  .item-actions{margin-top:8px;display:flex;gap:8px;}
+  .item-actions button{background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:0.65rem;padding:4px 10px;cursor:pointer;transition:all 0.2s;}
+  .item-actions button:hover{border-color:var(--accent);color:var(--accent);}
+  .item-actions button.del:hover{border-color:var(--danger);color:var(--danger);}
+  .empty-state{text-align:center;padding:50px 20px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:0.78rem;}
+  .empty-icon{font-size:36px;margin-bottom:14px;opacity:0.4;}
+
+  /* LOADING SPINNER */
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,229,255,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;}
+
+  /* SERVER BADGE */
+  .server-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);border-radius:20px;padding:4px 12px;font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:var(--accent2);margin-top:8px;}
+  .server-dot{width:6px;height:6px;background:var(--accent2);border-radius:50%;animation:pulse 1.5s ease-in-out infinite;}
+
+  @keyframes fadeDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes glitch{0%{transform:translate(0)}20%{transform:translate(-2px,2px)}40%{transform:translate(2px,-2px)}60%{transform:translate(-2px,0)}100%{transform:translate(0)}}
+  .glitch{animation:glitch 0.3s ease;}
+</style>
+</head>
+<body>
+
+<!-- ══ AUTH OVERLAY ══ -->
+<div id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-title">🔐 CIPHERFORGE</div>
+    <div class="auth-sub">SECURE ACCESS PORTAL</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">LOGIN</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">REGISTER</button>
+    </div>
+    <div id="authMsg" class="auth-msg"></div>
+    <div id="loginForm">
+      <div class="auth-field"><label>Username</label><input type="text" id="loginUser" placeholder="Enter username"></div>
+      <div class="auth-field"><label>Password</label><input type="password" id="loginPass" placeholder="Enter password"></div>
+      <button class="btn-auth" onclick="doLogin()">LOGIN →</button>
+      <p style="text-align:center;margin-top:14px;font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:var(--text-dim);">
+        Demo: <span style="color:var(--accent)">admin</span> / <span style="color:var(--accent)">admin123</span>
+      </p>
+    </div>
+    <div id="registerForm" style="display:none;">
+      <div class="auth-field"><label>Username</label><input type="text" id="regUser" placeholder="Choose a username"></div>
+      <div class="auth-field"><label>Password</label><input type="password" id="regPass" placeholder="At least 6 characters"></div>
+      <div class="auth-field"><label>Confirm Password</label><input type="password" id="regPass2" placeholder="Repeat password"></div>
+      <button class="btn-auth" onclick="doRegister()">CREATE ACCOUNT →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div class="container" id="mainApp" style="display:none;">
+  <header>
+    <div class="logo-line"><div class="logo-icon">🔐</div><h1>CipherForge</h1></div>
+    <p class="subtitle">Web-Based Text Encryption Tool // <span>Assignment A2</span></p>
+    <div class="user-bar">
+      Logged in as <span class="uname" id="headerUsername"></span>
+      <button class="btn-logout" onclick="doLogout()">LOGOUT</button>
+    </div>
+    <div style="display:flex;justify-content:center;margin-top:8px;">
+      <div class="server-badge"><div class="server-dot"></div>Flask Backend Connected — All encryption processed server-side</div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('encrypt')"><span class="tab-dot"></span>ENCRYPT</button>
+    <button class="tab" onclick="switchTab('decrypt')"><span class="tab-dot"></span>DECRYPT</button>
+    <button class="tab" onclick="switchTab('hash')"><span class="tab-dot"></span>HASH</button>
+    <button class="tab" onclick="switchTab('saved')"><span class="tab-dot"></span>SAVED</button>
+    <button class="tab" onclick="switchTab('history')"><span class="tab-dot"></span>HISTORY</button>
+  </div>
+
+  <!-- ══ ENCRYPT TAB ══ -->
+  <div id="tab-encrypt" class="card">
+    <div class="grid-2">
+      <div class="field">
+        <label>Plain Text Input <span class="badge">REQUIRED</span></label>
+        <textarea id="plaintext" placeholder="Enter the text you want to encrypt..."></textarea>
+      </div>
+      <div class="field">
+        <label>Ciphertext Output <span class="badge">FROM SERVER</span></label>
+        <div class="output-wrapper">
+          <textarea id="outputArea" readonly placeholder="Encrypted output will appear here..."></textarea>
+          <div class="output-actions">
+            <button class="icon-btn" onclick="copyEl('outputArea')" title="Copy">📋</button>
+            <button class="icon-btn" onclick="clearEncrypt()" title="Clear">🗑</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="grid-2" style="gap:16px;align-items:start;">
+      <div class="field">
+        <label>Encryption Algorithm <span class="badge">REQUIRED</span></label>
+        <select id="algoSelect" onchange="onAlgoChange()">
+          <option value="">-- Select an Algorithm --</option>
+          <optgroup label="Classical Ciphers">
+            <option value="caesar">Caesar Cipher</option>
+            <option value="vigenere">Vigenère Cipher</option>
+            <option value="atbash">Atbash Cipher</option>
+            <option value="rot13">ROT-13</option>
+          </optgroup>
+          <optgroup label="Modern Symmetric (PyCryptodome)">
+            <option value="aes">AES-256 (CBC Mode)</option>
+            <option value="des">Triple-DES / 3DES (CBC Mode)</option>
+            <option value="rc4">RC4 (Stream Cipher)</option>
+          </optgroup>
+          <optgroup label="Encoding">
+            <option value="base64">Base64</option>
+          </optgroup>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="key-field" id="field-caesar">
+          <label>Shift Value <span class="badge">1-25</span></label>
+          <input type="number" id="caesarShift" min="1" max="25" value="13" style="max-width:160px;">
+        </div>
+        <div class="key-field" id="field-vigenere">
+          <label>Keyword <span class="badge">ALPHABETS ONLY</span></label>
+          <input type="text" id="vigenereKey" placeholder="e.g. SECRET">
+        </div>
+        <div class="key-field" id="field-aes">
+          <label>Secret Key <span class="badge">AES-256</span></label>
+          <input type="password" id="aesKey" placeholder="Enter a strong passphrase...">
+          <div class="strength-bar"><div class="strength-fill" id="aesStrengthFill" style="width:0%;background:var(--danger);"></div></div>
+        </div>
+        <div class="key-field" id="field-des">
+          <label>Secret Key <span class="badge">3DES</span></label>
+          <input type="password" id="desKey" placeholder="Enter passphrase...">
+        </div>
+        <div class="key-field" id="field-rc4">
+          <label>Secret Key <span class="badge">RC4</span></label>
+          <input type="password" id="rc4Key" placeholder="Enter key...">
+        </div>
+      </div>
+    </div>
+    <div class="info-panel" id="algoInfo" style="display:none;">
+      <h3>ALGORITHM INFO</h3>
+      <div class="info-grid" id="algoInfoGrid"></div>
+    </div>
+    <hr class="divider">
+    <div id="encryptMsg" class="message"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doEncrypt()" id="encryptBtn">⚡ ENCRYPT</button>
+      <button class="btn btn-green" onclick="saveMessage()">💾 SAVE TO ACCOUNT</button>
+      <button class="btn btn-ghost" onclick="clearEncrypt()">CLEAR</button>
+    </div>
+  </div>
+
+  <!-- ══ DECRYPT TAB ══ -->
+  <div id="tab-decrypt" class="card" style="display:none;">
+    <div class="grid-2">
+      <div class="field">
+        <label>Ciphertext Input <span class="badge">REQUIRED</span></label>
+        <textarea id="cipherInput" placeholder="Paste the encrypted text here..."></textarea>
+      </div>
+      <div class="field">
+        <label>Decrypted Output <span class="badge">FROM SERVER</span></label>
+        <div class="output-wrapper">
+          <textarea id="decryptOutput" readonly placeholder="Decrypted text will appear here..."></textarea>
+          <div class="output-actions"><button class="icon-btn" onclick="copyEl('decryptOutput')" title="Copy">📋</button></div>
+        </div>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="grid-2" style="gap:16px;align-items:start;">
+      <div class="field">
+        <label>Decryption Algorithm <span class="badge">REQUIRED</span></label>
+        <select id="decAlgoSelect" onchange="onDecAlgoChange()">
+          <option value="">-- Select an Algorithm --</option>
+          <optgroup label="Classical Ciphers">
+            <option value="caesar">Caesar Cipher</option>
+            <option value="vigenere">Vigenère Cipher</option>
+            <option value="atbash">Atbash Cipher</option>
+            <option value="rot13">ROT-13</option>
+          </optgroup>
+          <optgroup label="Modern Symmetric (PyCryptodome)">
+            <option value="aes">AES-256 (CBC Mode)</option>
+            <option value="des">Triple-DES / 3DES (CBC Mode)</option>
+            <option value="rc4">RC4 (Stream Cipher)</option>
+          </optgroup>
+          <optgroup label="Encoding">
+            <option value="base64">Base64</option>
+          </optgroup>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="key-field" id="dec-field-caesar"><label>Shift Value</label><input type="number" id="decCaesarShift" min="1" max="25" value="13" style="max-width:160px;"></div>
+        <div class="key-field" id="dec-field-vigenere"><label>Keyword</label><input type="text" id="decVigenereKey" placeholder="e.g. SECRET"></div>
+        <div class="key-field" id="dec-field-aes"><label>Secret Key (same as encryption)</label><input type="password" id="decAesKey" placeholder="Enter passphrase..."></div>
+        <div class="key-field" id="dec-field-des"><label>Secret Key</label><input type="password" id="decDesKey" placeholder="Enter 3DES passphrase..."></div>
+        <div class="key-field" id="dec-field-rc4"><label>Secret Key</label><input type="password" id="decRc4Key" placeholder="Enter RC4 key..."></div>
+      </div>
+    </div>
+    <hr class="divider">
+    <div id="decryptMsg" class="message"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="doDecrypt()" id="decryptBtn">🔓 DECRYPT</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('cipherInput').value='';document.getElementById('decryptOutput').value='';">CLEAR</button>
+    </div>
+  </div>
+
+  <!-- ══ HASH TAB ══ -->
+  <div id="tab-hash" class="card" style="display:none;">
+    <div class="grid-2">
+      <div class="field">
+        <label>Input Text <span class="badge">REQUIRED</span></label>
+        <textarea id="hashInput" placeholder="Enter text to hash..."></textarea>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="field">
+          <label>Hash Algorithm <span class="badge">SELECT</span></label>
+          <select id="hashAlgo">
+            <option value="sha256">SHA-256 (Recommended)</option>
+            <option value="sha512">SHA-512</option>
+            <option value="sha1">SHA-1 (Legacy)</option>
+            <option value="md5">MD5 (Checksum only)</option>
+            <option value="sha3">SHA-3 (256-bit)</option>
+            <option value="ripemd">RIPEMD-160</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Hash Output <span class="badge">HEX / FROM SERVER</span></label>
+          <div class="output-wrapper">
+            <textarea id="hashOutput" readonly placeholder="Hash will appear here..." style="min-height:90px;color:var(--accent2);font-size:0.75rem;"></textarea>
+            <div class="output-actions"><button class="icon-btn" onclick="copyEl('hashOutput')" title="Copy">📋</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <hr class="divider">
+    <div id="hashMsg" class="message"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doHash()" id="hashBtn">🔒 GENERATE HASH</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('hashInput').value='';document.getElementById('hashOutput').value='';">CLEAR</button>
+    </div>
+    <div class="info-panel" style="margin-top:20px;">
+      <h3>ABOUT HASHING (PyCryptodome)</h3>
+      <div class="info-grid">
+        <div class="info-item"><span class="info-label">Type</span><span class="info-value accent">One-Way (Irreversible)</span></div>
+        <div class="info-item"><span class="info-label">Library</span><span class="info-value green">PyCryptodome</span></div>
+        <div class="info-item"><span class="info-label">Recommended</span><span class="info-value green">SHA-256 or SHA-3</span></div>
+        <div class="info-item"><span class="info-label">Avoid for Security</span><span class="info-value orange">MD5, SHA-1</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SAVED TAB ══ -->
+  <div id="tab-saved" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="section-title" style="margin:0;flex:1;">Saved Encrypted Messages (Server-Side)</div>
+      <button class="btn btn-ghost" onclick="clearAllSaved()" style="padding:8px 14px;font-size:0.62rem;">CLEAR ALL</button>
+    </div>
+    <div id="savedList"></div>
+  </div>
+
+  <!-- ══ HISTORY TAB ══ -->
+  <div id="tab-history" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="section-title" style="margin:0;flex:1;">Session History</div>
+      <button class="btn btn-ghost" onclick="clearHistory()" style="padding:8px 14px;font-size:0.62rem;">CLEAR</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat"><span class="stat-value" id="statTotal">0</span><span class="stat-label">Total Ops</span></div>
+    <div class="stat"><span class="stat-value" id="statEncrypt">0</span><span class="stat-label">Encrypted</span></div>
+    <div class="stat"><span class="stat-value" id="statDecrypt">0</span><span class="stat-label">Decrypted</span></div>
+    <div class="stat"><span class="stat-value" id="statHash">0</span><span class="stat-label">Hashed</span></div>
+    <div class="stat"><span class="stat-value" id="statSaved">0</span><span class="stat-label">Saved</span></div>
+    <div class="stat"><span class="stat-value" id="statAlgo">--</span><span class="stat-label">Last Algo</span></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  API HELPER — all requests go to Flask
+// ════════════════════════════════════════════
+async function api(endpoint, method='GET', body=null) {
+  const opts = { method, headers:{'Content-Type':'application/json'}, credentials:'same-origin' };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(endpoint, opts);
+  return res.json();
+}
+
+// ════════════════════════════════════════════
+//  AUTH
+// ════════════════════════════════════════════
+function switchAuthTab(tab) {
+  document.getElementById('loginForm').style.display = tab==='login' ? 'block' : 'none';
+  document.getElementById('registerForm').style.display = tab==='register' ? 'block' : 'none';
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (tab==='login'&&i===0)||(tab==='register'&&i===1)));
+  document.getElementById('authMsg').className = 'auth-msg';
+}
+function showAuthMsg(msg, type) { const e=document.getElementById('authMsg'); e.textContent=msg; e.className='auth-msg '+type; }
+
+async function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  if (!username||!password) { showAuthMsg('Please fill in all fields.','error'); return; }
+  const data = await api('/api/login','POST',{username,password});
+  if (data.error) { showAuthMsg(data.error,'error'); return; }
+  showAuthMsg('Access granted!','success');
+  setTimeout(() => { document.getElementById('authOverlay').style.display='none'; document.getElementById('mainApp').style.display='block'; document.getElementById('headerUsername').textContent=data.username; loadSaved(); updateStats(); }, 600);
+}
+
+async function doRegister() {
+  const username = document.getElementById('regUser').value.trim();
+  const password = document.getElementById('regPass').value;
+  const confirm  = document.getElementById('regPass2').value;
+  const data = await api('/api/register','POST',{username,password,confirm});
+  if (data.error) { showAuthMsg(data.error,'error'); return; }
+  showAuthMsg('Account created! You can now login.','success');
+  setTimeout(() => switchAuthTab('login'), 1200);
+}
+
+async function doLogout() {
+  await api('/api/logout','POST');
+  historyLog=[]; stats={total:0,encrypt:0,decrypt:0,hash:0,saved:0,lastAlgo:'--'};
+  document.getElementById('mainApp').style.display='none';
+  document.getElementById('authOverlay').style.display='flex';
+  document.getElementById('loginUser').value=''; document.getElementById('loginPass').value='';
+  switchAuthTab('login');
+}
+
+// Check if already logged in on page load
+window.addEventListener('load', async () => {
+  const data = await api('/api/me');
+  if (data.username) {
+    document.getElementById('authOverlay').style.display='none';
+    document.getElementById('mainApp').style.display='block';
+    document.getElementById('headerUsername').textContent=data.username;
+    loadSaved(); updateStats();
+  }
+});
+document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('regPass2').addEventListener('keydown', e => { if(e.key==='Enter') doRegister(); });
+
+// ════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════
+const tabNames = ['encrypt','decrypt','hash','saved','history'];
+function switchTab(tab) {
+  tabNames.forEach((t,i) => { document.getElementById('tab-'+t).style.display='none'; document.querySelectorAll('.tab')[i].classList.remove('active'); });
+  document.getElementById('tab-'+tab).style.display='block';
+  document.querySelectorAll('.tab')[tabNames.indexOf(tab)].classList.add('active');
+  if (tab==='saved') loadSaved();
+  if (tab==='history') renderHistory();
+}
+
+// ════════════════════════════════════════════
+//  ALGORITHM DROPDOWN
+// ════════════════════════════════════════════
+const algoInfo = {
+  caesar:   {name:'Caesar Cipher',    type:'Classical Substitution',  keyspace:'26 shifts',         security:'Very Low',    lib:'Custom Python',      note:'Simple letter shift by n positions.'},
+  vigenere: {name:'Vigenère Cipher',  type:'Polyalphabetic',          keyspace:'26^key_length',     security:'Low–Medium',  lib:'Custom Python',      note:'Keyword-based shifting. Resistant to simple frequency analysis.'},
+  aes:      {name:'AES-256 (CBC)',     type:'Symmetric Block Cipher',  keyspace:'2^256',             security:'Very High ✓', lib:'PyCryptodome',       note:'Industry standard. Random IV per encryption. SHA-256 key derivation.'},
+  des:      {name:'Triple-DES (CBC)', type:'Symmetric Block Cipher',  keyspace:'2^112 effective',   security:'Medium',      lib:'PyCryptodome',       note:'3x DES application. Legacy; prefer AES for new systems.'},
+  rc4:      {name:'RC4',              type:'Stream Cipher',           keyspace:'Variable',          security:'Low (Deprecated)', lib:'PyCryptodome (ARC4)', note:'Deprecated due to statistical bias vulnerabilities.'},
+  base64:   {name:'Base64',           type:'Encoding (not encryption)',keyspace:'N/A',              security:'None',        lib:'Python stdlib',      note:'Binary-to-text encoding. Fully reversible without a key.'},
+  atbash:   {name:'Atbash Cipher',    type:'Classical Substitution',  keyspace:'1 (fixed)',         security:'Very Low',    lib:'Custom Python',      note:'Reverse-alphabet mapping. Self-inverse.'},
+  rot13:    {name:'ROT-13',           type:'Classical Substitution',  keyspace:'Fixed (13)',        security:'Very Low',    lib:'Custom Python',      note:'Special case of Caesar (shift=13). Self-inverse.'},
+};
+
+function onAlgoChange() {
+  const algo = document.getElementById('algoSelect').value;
+  ['caesar','vigenere','aes','des','rc4'].forEach(a => { const el=document.getElementById('field-'+a); if(el) el.classList.toggle('visible', a===algo); });
+  const info = algoInfo[algo];
+  const panel = document.getElementById('algoInfo');
+  if (info) {
+    panel.style.display='block';
+    document.getElementById('algoInfoGrid').innerHTML = `
+      <div class="info-item"><span class="info-label">Algorithm</span><span class="info-value accent">${info.name}</span></div>
+      <div class="info-item"><span class="info-label">Type</span><span class="info-value">${info.type}</span></div>
+      <div class="info-item"><span class="info-label">Key Space</span><span class="info-value green">${info.keyspace}</span></div>
+      <div class="info-item"><span class="info-label">Security Level</span><span class="info-value orange">${info.security}</span></div>
+      <div class="info-item"><span class="info-label">Backend Library</span><span class="info-value accent">${info.lib}</span></div>
+      <div class="info-item" style="grid-column:1/-1"><span class="info-label">Note</span><span class="info-value">${info.note}</span></div>`;
+  } else { panel.style.display='none'; }
+}
+
+function onDecAlgoChange() {
+  const algo = document.getElementById('decAlgoSelect').value;
+  ['caesar','vigenere','aes','des','rc4'].forEach(a => { const el=document.getElementById('dec-field-'+a); if(el) el.classList.toggle('visible', a===algo); });
+}
+
+document.getElementById('aesKey').addEventListener('input', function() {
+  const p=Math.min(100,this.value.length*5); const f=document.getElementById('aesStrengthFill');
+  f.style.width=p+'%'; f.style.background=p<30?'var(--danger)':p<70?'orange':'var(--accent2)';
+});
+
+// ════════════════════════════════════════════
+//  ENCRYPT — sends to Flask /api/encrypt
+// ════════════════════════════════════════════
+async function doEncrypt() {
+  const text  = document.getElementById('plaintext').value;
+  const algo  = document.getElementById('algoSelect').value;
+  const key   = getKey(algo, 'enc');
+  const shift = parseInt(document.getElementById('caesarShift').value)||13;
+
+  if (!text.trim()) { showMsg('encryptMsg','error','Plain text cannot be empty.'); return; }
+  if (!algo)        { showMsg('encryptMsg','error','Please select an encryption algorithm from the dropdown.'); return; }
+
+  setLoading('encryptBtn', true);
+  const data = await api('/api/encrypt','POST',{text, algorithm:algo, key, shift});
+  setLoading('encryptBtn', false);
+
+  if (data.error) { showMsg('encryptMsg','error', data.error); return; }
+
+  const out = document.getElementById('outputArea');
+  out.value = data.result; out.classList.add('glitch'); setTimeout(()=>out.classList.remove('glitch'),400);
+  showMsg('encryptMsg','success','✓ Encrypted by Flask server using '+algoInfo[algo].name);
+  addHistory('ENCRYPT', algoInfo[algo].name, text, data.result);
+  stats.encrypt++; stats.total++; stats.lastAlgo=algoInfo[algo].name; updateStats();
+}
+
+// ════════════════════════════════════════════
+//  DECRYPT — sends to Flask /api/decrypt
+// ════════════════════════════════════════════
+async function doDecrypt() {
+  const text  = document.getElementById('cipherInput').value;
+  const algo  = document.getElementById('decAlgoSelect').value;
+  const key   = getKey(algo, 'dec');
+  const shift = parseInt(document.getElementById('decCaesarShift').value)||13;
+
+  if (!text.trim()) { showMsg('decryptMsg','error','Ciphertext cannot be empty.'); return; }
+  if (!algo)        { showMsg('decryptMsg','error','Please select an algorithm from the dropdown.'); return; }
+
+  setLoading('decryptBtn', true);
+  const data = await api('/api/decrypt','POST',{text, algorithm:algo, key, shift});
+  setLoading('decryptBtn', false);
+
+  if (data.error) { showMsg('decryptMsg','error', data.error); return; }
+  document.getElementById('decryptOutput').value = data.result;
+  showMsg('decryptMsg','success','✓ Decrypted by Flask server');
+  addHistory('DECRYPT', algoInfo[algo].name, text, data.result);
+  stats.decrypt++; stats.total++; stats.lastAlgo=algoInfo[algo].name; updateStats();
+}
+
+// ════════════════════════════════════════════
+//  HASH — sends to Flask /api/hash
+// ════════════════════════════════════════════
+async function doHash() {
+  const text = document.getElementById('hashInput').value.trim();
+  const algo = document.getElementById('hashAlgo').value;
+  if (!text) { showMsg('hashMsg','error','Input text cannot be empty.'); return; }
+
+  setLoading('hashBtn', true);
+  const data = await api('/api/hash','POST',{text, algorithm:algo});
+  setLoading('hashBtn', false);
+
+  if (data.error) { showMsg('hashMsg','error', data.error); return; }
+  document.getElementById('hashOutput').value = data.result;
+  document.getElementById('hashMsg').style.display='none';
+  addHistory('HASH', algo.toUpperCase(), text, data.result);
+  stats.hash++; stats.total++; stats.lastAlgo=algo.toUpperCase(); updateStats();
+}
+
+// ════════════════════════════════════════════
+//  SAVED MESSAGES — stored on Flask server
+// ════════════════════════════════════════════
+async function saveMessage() {
+  const ciphertext = document.getElementById('outputArea').value;
+  const algorithm  = algoInfo[document.getElementById('algoSelect').value]?.name || '';
+  if (!ciphertext) { showMsg('encryptMsg','error','Encrypt something first before saving.'); return; }
+  const data = await api('/api/messages','POST',{ciphertext, algorithm});
+  if (data.error) { showMsg('encryptMsg','error', data.error); return; }
+  showMsg('encryptMsg','success','✓ Message saved to your server account.');
+  stats.saved++; updateStats(); loadSaved();
+}
+
+async function loadSaved() {
+  const data = await api('/api/messages');
+  const list = document.getElementById('savedList');
+  const msgs = data.messages || [];
+  document.getElementById('statSaved').textContent = msgs.length;
+  if (!msgs.length) { list.innerHTML='<div class="empty-state"><div class="empty-icon">📂</div>No saved messages yet.<br>Encrypt something and click SAVE TO ACCOUNT.</div>'; return; }
+  list.innerHTML = msgs.map(m => `
+    <div class="saved-item">
+      <div class="item-header"><span class="item-algo">🔐 ${m.algorithm}</span><span class="item-time">${m.time}</span></div>
+      <div class="item-preview">Ciphertext: <span>${m.ciphertext.substring(0,120)}${m.ciphertext.length>120?'...':''}</span></div>
+      <div class="item-actions">
+        <button onclick="navigator.clipboard.writeText('${m.ciphertext.replace(/'/g,"\\'")}')">📋 Copy</button>
+        <button onclick="loadToDecrypt('${m.ciphertext.replace(/'/g,"\\'")}')">↩ Load to Decrypt</button>
+        <button class="del" onclick="deleteSaved(${m.id})">🗑 Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+async function deleteSaved(id) {
+  await api('/api/messages/'+id,'DELETE');
+  loadSaved();
+}
+
+async function clearAllSaved() {
+  const data = await api('/api/messages');
+  const msgs = data.messages || [];
+  await Promise.all(msgs.map(m => api('/api/messages/'+m.id,'DELETE')));
+  loadSaved();
+}
+
+function loadToDecrypt(ct) {
+  document.getElementById('cipherInput').value = ct;
+  switchTab('decrypt');
+}
+
+// ════════════════════════════════════════════
+//  HISTORY (session only)
+// ════════════════════════════════════════════
+let historyLog = [];
+function addHistory(op, algo, input, output) {
+  historyLog.unshift({op, algo, input:input.substring(0,60)+(input.length>60?'...':''), output:output.substring(0,80)+(output.length>80?'...':''), time:new Date().toLocaleTimeString()});
+  if(historyLog.length>30) historyLog.pop();
+}
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!historyLog.length) { list.innerHTML='<div class="empty-state"><div class="empty-icon">📂</div>No operations yet.</div>'; return; }
+  const cols = {ENCRYPT:'var(--accent)',DECRYPT:'var(--accent3)',HASH:'var(--accent2)'};
+  list.innerHTML = historyLog.map(h => `
+    <div class="history-item">
+      <div class="item-header"><span style="color:${cols[h.op]};font-family:'Share Tech Mono',monospace;">${h.op==='ENCRYPT'?'🔐':h.op==='DECRYPT'?'🔓':'🔒'} ${h.op} · ${h.algo}</span><span class="item-time">${h.time}</span></div>
+      <div class="item-preview">IN: ${h.input}</div>
+      <div class="item-preview" style="margin-top:4px;">OUT: <span>${h.output}</span></div>
+    </div>`).join('');
+}
+function clearHistory() { historyLog=[]; renderHistory(); }
+
+// ════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════
+function getKey(algo, mode) {
+  const map = {
+    enc: {aes:'aesKey', des:'desKey', rc4:'rc4Key', vigenere:'vigenereKey'},
+    dec: {aes:'decAesKey', des:'decDesKey', rc4:'decRc4Key', vigenere:'decVigenereKey'},
+  };
+  const id = map[mode][algo];
+  return id ? document.getElementById(id).value : '';
+}
+function showMsg(id, type, msg) { const e=document.getElementById(id); e.className='message '+type; e.textContent=msg; e.style.display='flex'; }
+function clearEncrypt() { document.getElementById('plaintext').value=''; document.getElementById('outputArea').value=''; document.getElementById('encryptMsg').style.display='none'; }
+function copyEl(id) { const v=document.getElementById(id).value; if(v) navigator.clipboard.writeText(v); }
+function setLoading(btnId, on) { const b=document.getElementById(btnId); b.disabled=on; b.style.opacity=on?'0.6':'1'; }
+
+let stats = {total:0,encrypt:0,decrypt:0,hash:0,saved:0,lastAlgo:'--'};
+function updateStats() {
+  document.getElementById('statTotal').textContent=stats.total;
+  document.getElementById('statEncrypt').textContent=stats.encrypt;
+  document.getElementById('statDecrypt').textContent=stats.decrypt;
+  document.getElementById('statHash').textContent=stats.hash;
+  document.getElementById('statSaved').textContent=stats.saved;
+  document.getElementById('statAlgo').textContent=stats.lastAlgo;
+}
+</script>
+</body>
+</html>
